@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SMC Trade Checklist</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#0a0a0a;--surface:#111;--surface2:#1a1a1a;--border:#222;--border2:#333;
+    --text:#f0f0f0;--text2:#888;--text3:#555;
+    --green:#1D9E75;--green-light:#0F6E56;--green-bg:rgba(29,158,117,0.1);
+    --red:#E24B4A;--red-bg:rgba(226,75,74,0.1);
+    --blue:#378ADD;--blue-bg:rgba(55,138,221,0.1);
+    --amber:#EF9F27;--amber-bg:rgba(239,159,39,0.1);
+  }
+  body{background:var(--bg);color:var(--text);font-family:'SF Mono','Fira Code',monospace;min-height:100vh;padding:2rem 1rem}
+  .container{max-width:620px;margin:0 auto}
+
+  .header{margin-bottom:2rem}
+  .header-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1rem}
+  .title{font-size:11px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text2);font-weight:400}
+  .title span{display:block;font-size:22px;letter-spacing:-0.02em;color:var(--text);margin-top:4px;font-family:inherit;font-weight:600}
+  .clock-box{text-align:right}
+  .clock{font-size:20px;font-weight:600;color:var(--text);letter-spacing:0.05em}
+  .clock-label{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-top:2px}
+  .ny-status{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:4px;vertical-align:middle}
+  .ny-open{background:var(--green);box-shadow:0 0 6px var(--green)}
+  .ny-closed{background:var(--text3)}
+
+  .progress-track{height:2px;background:var(--border);border-radius:1px;margin-bottom:1.5rem;overflow:hidden}
+  .progress-fill{height:100%;background:var(--green);transition:width 0.5s cubic-bezier(0.4,0,0.2,1);border-radius:1px}
+
+  .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:1.5rem;min-height:22px}
+  .chip{padding:3px 10px;border-radius:3px;font-size:10px;letter-spacing:0.08em;text-transform:uppercase;font-weight:500;border:1px solid}
+  .chip-green{color:var(--green);border-color:rgba(29,158,117,0.3);background:var(--green-bg)}
+  .chip-red{color:var(--red);border-color:rgba(226,75,74,0.3);background:var(--red-bg)}
+  .chip-blue{color:var(--blue);border-color:rgba(55,138,221,0.3);background:var(--blue-bg)}
+  .chip-amber{color:var(--amber);border-color:rgba(239,159,39,0.3);background:var(--amber-bg)}
+
+  .step{border:1px solid var(--border);border-radius:4px;padding:1rem 1.25rem;margin-bottom:0.5rem;transition:all 0.2s;position:relative;overflow:hidden}
+  .step::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:transparent;transition:background 0.2s}
+  .step.active::before{background:var(--blue)}
+  .step.completed::before{background:var(--green)}
+  .step.locked{opacity:0.3;pointer-events:none}
+  .step.completed{border-color:rgba(29,158,117,0.2);background:rgba(29,158,117,0.03)}
+
+  .step-header{display:flex;gap:12px;align-items:flex-start}
+  .step-num{font-size:10px;color:var(--text3);letter-spacing:0.1em;padding-top:2px;min-width:20px}
+  .step.active .step-num{color:var(--blue)}
+  .step.completed .step-num{color:var(--green)}
+  .step-label{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-0.01em;margin-bottom:3px}
+  .step-desc{font-size:11px;color:var(--text2);line-height:1.5}
+
+  .step-body{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--border)}
+  .sub-label{font-size:10px;color:var(--text3);letter-spacing:0.1em;text-transform:uppercase;margin-bottom:8px}
+
+  .pills{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .pill{padding:6px 14px;border-radius:3px;border:1px solid var(--border2);font-size:11px;font-family:inherit;font-weight:500;color:var(--text2);background:transparent;cursor:pointer;letter-spacing:0.05em;transition:all 0.15s}
+  .pill:hover{border-color:var(--blue);color:var(--blue)}
+  .pill.sel-bull{border-color:rgba(29,158,117,0.5);color:var(--green);background:var(--green-bg)}
+  .pill.sel-bear{border-color:rgba(226,75,74,0.5);color:var(--red);background:var(--red-bg)}
+  .pill.sel-blue{border-color:rgba(55,138,221,0.5);color:var(--blue);background:var(--blue-bg)}
+
+  .confirm-btn{padding:7px 16px;border-radius:3px;border:1px solid var(--green);background:transparent;color:var(--green);font-size:11px;font-family:inherit;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;margin-top:4px}
+  .confirm-btn:hover:not(:disabled){background:var(--green);color:#000}
+  .confirm-btn:disabled{opacity:0.3;cursor:default}
+
+  .tf-info{font-size:12px;color:var(--text2);padding:8px 12px;border:1px solid var(--border);border-radius:3px;margin-bottom:10px;background:var(--surface2)}
+  .tf-info strong{color:var(--amber)}
+
+  .verdict{border-radius:4px;padding:1.25rem;margin-top:1rem;display:none;animation:fadeIn 0.3s ease}
+  .verdict-go{border:1px solid rgba(29,158,117,0.4);background:rgba(29,158,117,0.05)}
+  .verdict-nogo{border:1px solid rgba(226,75,74,0.4);background:rgba(226,75,74,0.05)}
+  .verdict-label{font-size:9px;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:6px}
+  .verdict-go .verdict-label{color:var(--green)}
+  .verdict-nogo .verdict-label{color:var(--red)}
+  .verdict-title{font-size:16px;font-weight:700;letter-spacing:-0.02em;margin-bottom:6px}
+  .verdict-go .verdict-title{color:var(--green)}
+  .verdict-nogo .verdict-title{color:var(--red)}
+  .verdict-sub{font-size:12px;color:var(--text2);line-height:1.6}
+
+  .reset-btn{margin-top:12px;padding:5px 12px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text3);font-size:10px;font-family:inherit;letter-spacing:0.08em;text-transform:uppercase;cursor:pointer;transition:all 0.15s}
+  .reset-btn:hover{border-color:var(--text2);color:var(--text2)}
+
+  /* CALCULATOR */
+  .calc-section{margin-top:2rem;border:1px solid var(--border);border-radius:4px;overflow:hidden}
+  .calc-header{padding:0.875rem 1.25rem;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
+  .calc-title{font-size:10px;letter-spacing:0.15em;text-transform:uppercase;color:var(--text2)}
+  .calc-body{padding:1.25rem}
+  .input-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1rem}
+  .input-group{display:flex;flex-direction:column;gap:5px}
+  .input-label{font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase}
+  .input-field{background:var(--surface2);border:1px solid var(--border2);border-radius:3px;padding:8px 10px;color:var(--text);font-family:inherit;font-size:13px;font-weight:500;outline:none;transition:border-color 0.15s;width:100%}
+  .input-field:focus{border-color:var(--blue)}
+  .input-field::placeholder{color:var(--text3)}
+  .tp-controls{display:flex;align-items:center;gap:10px;margin-bottom:1rem}
+  .tp-label{font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;flex:1}
+  .tp-stepper{display:flex;align-items:center;gap:6px}
+  .tp-btn{width:26px;height:26px;border-radius:3px;border:1px solid var(--border2);background:transparent;color:var(--text2);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;font-family:inherit;line-height:1}
+  .tp-btn:hover{border-color:var(--blue);color:var(--blue)}
+  .tp-count{font-size:14px;font-weight:600;color:var(--text);min-width:20px;text-align:center}
+  .calc-btn{width:100%;padding:9px;border-radius:3px;border:1px solid var(--blue);background:transparent;color:var(--blue);font-family:inherit;font-size:11px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;cursor:pointer;transition:all 0.15s;margin-bottom:1rem}
+  .calc-btn:hover{background:var(--blue);color:#000}
+  .results-box{display:none;animation:fadeIn 0.3s ease}
+  .divider{height:1px;background:var(--border);margin:1rem 0}
+  .result-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+  .result-row:last-child{border-bottom:none}
+  .result-label{font-size:11px;color:var(--text2)}
+  .result-val{font-size:13px;font-weight:600}
+  .val-red{color:var(--red)}
+  .val-green{color:var(--green)}
+  .val-amber{color:var(--amber)}
+  .val-blue{color:var(--blue)}
+  .tp-rows{margin-top:0.75rem}
+  .tp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:3px;margin-bottom:6px;background:var(--surface2)}
+  .tp-row-label{font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase}
+  .tp-row-vals{display:flex;gap:16px;align-items:center}
+  .tp-price{font-size:13px;font-weight:600;color:var(--green)}
+  .tp-ratio{font-size:10px;color:var(--text3)}
+  .rr-badge{display:inline-block;padding:2px 8px;border-radius:2px;font-size:10px;font-weight:600;letter-spacing:0.06em;background:var(--green-bg);color:var(--green);border:1px solid rgba(29,158,117,0.3)}
+  .warning-text{font-size:11px;color:var(--amber);margin-top:8px;padding:6px 10px;border:1px solid rgba(239,159,39,0.2);border-radius:3px;background:var(--amber-bg)}
+
+  @keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="header-top">
+      <div class="title">Sistema operativo<span>SMC Trade Checklist</span></div>
+      <div class="clock-box">
+        <div class="clock" id="clock">--:--</div>
+        <div class="clock-label"><span class="ny-status" id="ny-dot"></span><span id="ny-label">--</span></div>
+      </div>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog" style="width:0%"></div></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <!-- STEP 1 -->
+  <div class="step active" id="s1">
+    <div class="step-header">
+      <div class="step-num">01</div>
+      <div>
+        <div class="step-label">Apertura mercato New York</div>
+        <div class="step-desc">Verificare che la sessione NY sia attiva (14:30–21:00 ora italiana)</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="pills">
+        <button class="pill" onclick="pickStep1('yes')">Sì, mercato aperto</button>
+        <button class="pill" onclick="pickStep1('no')">Ancora chiuso</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="step locked" id="s2">
+    <div class="step-header">
+      <div class="step-num">02</div>
+      <div>
+        <div class="step-label">Bias sessione precedente</div>
+        <div class="step-desc">Determinare il bias su 4H e 1H — detta il timeframe operativo</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sub-label">Bias 4H</div>
+      <div class="pills">
+        <button class="pill" id="b4h-up" onclick="pickBias('4h','up',this)">Rialzista</button>
+        <button class="pill" id="b4h-dn" onclick="pickBias('4h','down',this)">Ribassista</button>
+      </div>
+      <div class="sub-label">Bias 1H</div>
+      <div class="pills">
+        <button class="pill" id="b1h-up" onclick="pickBias('1h','up',this)">Rialzista</button>
+        <button class="pill" id="b1h-dn" onclick="pickBias('1h','down',this)">Ribassista</button>
+      </div>
+      <button class="confirm-btn" id="btn2" onclick="confirmStep2()" disabled>Conferma →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="step locked" id="s3">
+    <div class="step-header">
+      <div class="step-num">03</div>
+      <div>
+        <div class="step-label">Segnare livelli chiave sull'1H</div>
+        <div class="step-desc" id="s3-desc">In base al bias: minimi (uptrend) o massimi (downtrend)</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="pills">
+        <button class="pill" onclick="confirmStep(3)">Livelli segnati</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 4 -->
+  <div class="step locked" id="s4">
+    <div class="step-header">
+      <div class="step-num">04</div>
+      <div>
+        <div class="step-label">Liquidity Sweep</div>
+        <div class="step-desc">I livelli marcati vengono colpiti/violati. Non procedere prima.</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="pills">
+        <button class="pill" onclick="confirmStep(4)">Sweep confermato</button>
+        <button class="pill" onclick="noGo(4)">Non ancora — aspetto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 5 -->
+  <div class="step locked" id="s5">
+    <div class="step-header">
+      <div class="step-num">05</div>
+      <div>
+        <div class="step-label">Scala al timeframe operativo</div>
+        <div class="step-desc" id="s5-desc">Passare al TF corretto in base all'allineamento del bias</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="tf-info" id="tf-info">—</div>
+      <div class="pills">
+        <button class="pill" onclick="confirmStep(5)">Sul TF corretto</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- STEP 6 -->
+  <div class="step locked" id="s6">
+    <div class="step-header">
+      <div class="step-num">06</div>
+      <div>
+        <div class="step-label">Identificare il setup</div>
+        <div class="step-desc">Minimo uno tra: Order Block, Fair Value Gap, Equilibrium</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="sub-label">Setup identificato</div>
+      <div class="pills">
+        <button class="pill" id="p-ob" onclick="pickSetup('ob',this)">Order Block</button>
+        <button class="pill" id="p-fvg" onclick="pickSetup('fvg',this)">Fair Value Gap</button>
+        <button class="pill" id="p-eq" onclick="pickSetup('eq',this)">Equilibrium</button>
+      </div>
+      <button class="confirm-btn" id="btn6" onclick="confirmStep6()" disabled>Conferma setup →</button>
+    </div>
+  </div>
+
+  <!-- STEP 7 -->
+  <div class="step locked" id="s7">
+    <div class="step-header">
+      <div class="step-num">07</div>
+      <div>
+        <div class="step-label">Chiusura candela fuori dalla zona</div>
+        <div class="step-desc">La candela nella direzione del bias chiude al di fuori della zona di influenza</div>
+      </div>
+    </div>
+    <div class="step-body">
+      <div class="pills">
+        <button class="pill" onclick="confirmStep7('yes')">Chiusura confermata</button>
+        <button class="pill" onclick="confirmStep7('no')">Non ancora</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- VERDICTS -->
+  <div class="verdict verdict-go" id="v-go">
+    <div class="verdict-label">Setup completo</div>
+    <div class="verdict-title">ENTRA NEL TRADE</div>
+    <div class="verdict-sub" id="v-go-sub"></div>
+    <button class="reset-btn" onclick="resetAll()">↺ Nuova sessione</button>
+  </div>
+  <div class="verdict verdict-nogo" id="v-nogo">
+    <div class="verdict-label">Setup incompleto</div>
+    <div class="verdict-title">NON ENTRARE</div>
+    <div class="verdict-sub" id="v-nogo-sub"></div>
+    <button class="reset-btn" onclick="resetAll()">↺ Ricomincia</button>
+  </div>
+
+  <!-- CALCULATOR -->
+  <div class="calc-section" style="margin-top:2rem">
+    <div class="calc-header">
+      <span class="calc-title">Calcolatore SL / TP</span>
+      <span style="font-size:10px;color:var(--text3)" id="calc-dir-badge">configurare il bias per la direzione</span>
+    </div>
+    <div class="calc-body">
+      <div class="input-grid">
+        <div class="input-group">
+          <label class="input-label">Prezzo di entrata</label>
+          <input class="input-field" type="number" id="inp-entry" placeholder="es. 5250.00" step="0.01" oninput="calcUpdate()">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Prezzo Stop Loss</label>
+          <input class="input-field" type="number" id="inp-sl" placeholder="es. 5230.00" step="0.01" oninput="calcUpdate()">
+        </div>
+      </div>
+      <div class="input-grid">
+        <div class="input-group">
+          <label class="input-label">Rapporto R:R target</label>
+          <input class="input-field" type="number" id="inp-rr" placeholder="es. 2" step="0.5" value="2" oninput="calcUpdate()">
+        </div>
+        <div class="input-group">
+          <label class="input-label">Capitale a rischio ($)</label>
+          <input class="input-field" type="number" id="inp-risk" placeholder="es. 100" step="1" oninput="calcUpdate()">
+        </div>
+      </div>
+      <div class="tp-controls">
+        <span class="tp-label">Take profit parziali</span>
+        <div class="tp-stepper">
+          <button class="tp-btn" onclick="changeTp(-1)">&#8722;</button>
+          <span class="tp-count" id="tp-count">3</span>
+          <button class="tp-btn" onclick="changeTp(1)">+</button>
+        </div>
+      </div>
+      <div class="results-box" id="results">
+        <div class="divider"></div>
+        <div class="result-row">
+          <span class="result-label">Distanza SL (punti)</span>
+          <span class="result-val val-red" id="r-sl-dist">&#8212;</span>
+        </div>
+        <div class="result-row">
+          <span class="result-label">TP finale (R:R raggiunto)</span>
+          <span class="result-val val-green" id="r-tp-full">&#8212;</span>
+        </div>
+        <div class="result-row" id="r-size-row" style="display:none">
+          <span class="result-label">Rischio per punto</span>
+          <span class="result-val val-blue" id="r-size">&#8212;</span>
+        </div>
+        <div class="tp-rows" id="tp-rows"></div>
+        <div class="warning-text" id="calc-warning" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+var S={step:1,bias4h:null,bias1h:null,tf:null,setup:[]};
+
+function updateClock(){
+  var n=new Date();
+  var h=n.getUTCHours();var m=n.getUTCMinutes().toString().padStart(2,'0');
+  var itH=((h+2)%24).toString().padStart(2,'0');
+  document.getElementById('clock').textContent=itH+':'+m;
+  var open=h>=12&&h<19;
+  var dot=document.getElementById('ny-dot');
+  var lbl=document.getElementById('ny-label');
+  dot.className='ny-status '+(open?'ny-open':'ny-closed');
+  lbl.textContent='New York '+(open?'aperto':'chiuso');
+}
+updateClock();setInterval(updateClock,15000);
+
+function prog(n){document.getElementById('prog').style.width=Math.round(n/7*100)+'%';}
+
+function addChip(txt,cls){
+  var c=document.createElement('span');c.className='chip '+cls;c.textContent=txt;
+  document.getElementById('chips').appendChild(c);
+}
+
+function activate(id){
+  var el=document.getElementById(id);
+  el.classList.remove('locked','completed');el.classList.add('active');
+}
+function complete(id){
+  var el=document.getElementById(id);
+  el.classList.remove('active','locked');el.classList.add('completed');
+}
+
+function pickStep1(v){
+  if(v==='no'){noGo(1,'Il mercato NY non è ancora aperto. Sessione 14:30–21:00 ora italiana.');return;}
+  complete('s1');activate('s2');prog(1);
+  addChip('NY aperto','chip-green');
+}
+
+function pickBias(tf,dir,el){
+  if(tf==='4h'){
+    S.bias4h=dir;
+    document.getElementById('b4h-up').className='pill'+(dir==='up'?' sel-bull':'');
+    document.getElementById('b4h-dn').className='pill'+(dir==='down'?' sel-bear':'');
+  }else{
+    S.bias1h=dir;
+    document.getElementById('b1h-up').className='pill'+(dir==='up'?' sel-bull':'');
+    document.getElementById('b1h-dn').className='pill'+(dir==='down'?' sel-bear':'');
+  }
+  document.getElementById('btn2').disabled=!(S.bias4h&&S.bias1h);
+}
+
+function confirmStep2(){
+  var same=S.bias4h===S.bias1h;
+  S.tf=same?'5':'15';
+  complete('s2');activate('s3');prog(2);
+  var dir=S.bias1h;
+  addChip('4H: '+(S.bias4h==='up'?'Rialzista':'Ribassista'),S.bias4h==='up'?'chip-green':'chip-red');
+  addChip('1H: '+(S.bias1h==='up'?'Rialzista':'Ribassista'),S.bias1h==='up'?'chip-green':'chip-red');
+  addChip('TF: '+S.tf+'min','chip-amber');
+  document.getElementById('s3-desc').textContent=dir==='up'
+    ?'Bias rialzista: segna i minimi significativi (swing low) sull\'1H'
+    :'Bias ribassista: segna i massimi significativi (swing high) sull\'1H';
+  document.getElementById('s5-desc').textContent='Bias '+(same?'allineati':'opposti')+': operare sui '+S.tf+' minuti';
+  document.getElementById('tf-info').innerHTML='Bias '+(same?'allineati → <strong>5 minuti</strong>':'opposti → <strong>15 minuti</strong>');
+}
+
+function confirmStep(n){
+  complete('s'+n);prog(n);
+  if(n<7)activate('s'+(n+1));
+}
+
+function confirmStep6(){
+  var labels={ob:'Order Block',fvg:'Fair Value Gap',eq:'Equilibrium'};
+  var found=S.setup.map(function(k){return labels[k];}).join(' + ');
+  complete('s6');activate('s7');prog(6);
+  addChip(found,'chip-blue');
+}
+
+function pickSetup(k,el){
+  var i=S.setup.indexOf(k);
+  if(i===-1){S.setup.push(k);el.classList.add('sel-blue');}
+  else{S.setup.splice(i,1);el.classList.remove('sel-blue');}
+  document.getElementById('btn6').disabled=S.setup.length===0;
+}
+
+function confirmStep7(v){
+  if(v==='no'){noGo(7,'La candela non ha ancora chiuso fuori dalla zona. Aspettare la conferma.');return;}
+  complete('s7');prog(7);
+  var labels={ob:'Order Block',fvg:'Fair Value Gap',eq:'Equilibrium'};
+  var found=S.setup.map(function(k){return labels[k];}).join(' + ');
+  var dir=S.bias1h==='up'?'LONG':'SHORT';
+  document.getElementById('v-go').style.display='block';
+  document.getElementById('v-go-sub').textContent='Direzione: '+dir+' | Timeframe: '+S.tf+'min | Setup: '+found+'. Applica la gestione del rischio.';
+}
+
+function noGo(step,msg){
+  if(!msg)msg='Condizione '+step+' non soddisfatta. Aspettare il segnale corretto.';
+  document.getElementById('v-nogo').style.display='block';
+  document.getElementById('v-nogo-sub').textContent=msg;
+}
+
+function resetAll(){
+  S={step:1,bias4h:null,bias1h:null,tf:null,setup:[]};
+  document.getElementById('chips').innerHTML='';
+  document.getElementById('v-go').style.display='none';
+  document.getElementById('v-nogo').style.display='none';
+  prog(0);
+  ['s1','s2','s3','s4','s5','s6','s7'].forEach(function(id,i){
+    var el=document.getElementById(id);
+    el.className='step'+(i===0?' active':' locked');
+  });
+  ['b4h-up','b4h-dn','b1h-up','b1h-dn','p-ob','p-fvg','p-eq'].forEach(function(id){
+    var el=document.getElementById(id);if(el)el.className='pill';
+  });
+  document.getElementById('btn2').disabled=true;
+  document.getElementById('btn6').disabled=true;
+  document.getElementById('tf-info').textContent='—';
+}
+
+var C={tpCount:3};
+
+function changeTp(d){
+  C.tpCount=Math.max(1,Math.min(6,C.tpCount+d));
+  document.getElementById('tp-count').textContent=C.tpCount;
+  calcUpdate();
+}
+
+function calcUpdate(){
+  var entry=parseFloat(document.getElementById('inp-entry').value);
+  var sl=parseFloat(document.getElementById('inp-sl').value);
+  var rr=parseFloat(document.getElementById('inp-rr').value)||2;
+  var risk=parseFloat(document.getElementById('inp-risk').value);
+  var res=document.getElementById('results');
+  var warn=document.getElementById('calc-warning');
+
+  if(isNaN(entry)||isNaN(sl)){res.style.display='none';return;}
+  res.style.display='block';
+  warn.style.display='none';
+
+  // direction from checklist state if available
+  var dir=S&&S.bias1h?S.bias1h:null;
+  var slDist=Math.abs(entry-sl);
+  if(slDist===0){warn.style.display='block';warn.textContent='SL uguale all\'entrata — impossibile calcolare.';return;}
+
+  // direction validation
+  if(dir){
+    if(dir==='up'&&sl>=entry){warn.style.display='block';warn.textContent='Attenzione: bias rialzista ma SL >= entrata. Verificare i prezzi.';}
+    if(dir==='down'&&sl<=entry){warn.style.display='block';warn.textContent='Attenzione: bias ribassista ma SL <= entrata. Verificare i prezzi.';}
+  }
+
+  var slDistRound=slDist.toFixed(2);
+  document.getElementById('r-sl-dist').textContent=slDistRound+' punti';
+
+  var tpFull=dir==='down'?entry-slDist*rr:entry+slDist*rr;
+  document.getElementById('r-tp-full').textContent=tpFull.toFixed(2)+' ('+rr+'R)';
+
+  // size
+  if(!isNaN(risk)&&risk>0){
+    document.getElementById('r-size-row').style.display='flex';
+    var rpp=(risk/slDist).toFixed(2);
+    document.getElementById('r-size').textContent='$'+rpp+' / punto';
+  } else {
+    document.getElementById('r-size-row').style.display='none';
+  }
+
+  // partial TPs — distribute evenly from 1R to rr
+  var rows=document.getElementById('tp-rows');
+  rows.innerHTML='<div style="font-size:10px;color:var(--text3);letter-spacing:0.08em;text-transform:uppercase;margin:0.75rem 0 6px">Take profit parziali</div>';
+  var n=C.tpCount;
+  var step=(rr-1)/(n-1)||0;
+  // allocate size % — larger slice to later TPs
+  var weights=[];
+  var wSum=0;
+  for(var i=0;i<n;i++){var w=i+1;weights.push(w);wSum+=w;}
+
+  for(var i=0;i<n;i++){
+    var ratio=n===1?rr:parseFloat((1+step*i).toFixed(2));
+    var price=dir==='down'?entry-slDist*ratio:entry+slDist*ratio;
+    var pct=Math.round(weights[i]/wSum*100);
+    var div=document.createElement('div');
+    div.className='tp-row';
+    div.innerHTML='<span class="tp-row-label">TP '+(i+1)+'</span>'
+      +'<div class="tp-row-vals">'
+      +'<span style="font-size:10px;color:var(--text3)">'+pct+'% pos.</span>'
+      +'<span class="tp-ratio">'+ratio+'R</span>'
+      +'<span class="tp-price">'+price.toFixed(2)+'</span>'
+      +'</div>';
+    rows.appendChild(div);
+  }
+}
+
+// update calc dir badge when bias is set
+var _origConfirmStep2=confirmStep2;
+confirmStep2=function(){
+  _origConfirmStep2();
+  var d=S.bias1h;
+  document.getElementById('calc-dir-badge').textContent=d==='up'?'direzione: LONG':'direzione: SHORT';
+  calcUpdate();
+};
+
+</script>
+</body>
+</html>
